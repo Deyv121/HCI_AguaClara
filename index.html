@@ -169,9 +169,35 @@
 
                         <label for="direccion">Referencia o dirección ficticia</label>
                         <input id="direccion" type="text" minlength="5" required placeholder="Ej.: frente al parque de la comunidad">
-                        <label for="descripcion">Breve descripción</label>
-                        <textarea id="descripcion" rows="4" minlength="15" required placeholder="Describe dónde está la fuga y qué observas."></textarea>
-                        <label for="correo-reporte">Correo de prueba</label>
+                    <label for="descripcion">Breve descripción</label>
+<div class="contenedor-voz">
+    <textarea id="descripcion" rows="4" minlength="15" required placeholder="Describe dónde está la fuga y qué observas, o usa el dictado por voz."></textarea>
+    <div class="controles-voz">
+        <button
+            id="boton-voz"
+            class="boton secundario boton-voz"
+            type="button"
+            aria-pressed="false"
+            aria-label="Activar dictado por voz en español"
+        >
+            <span aria-hidden="true">🎤</span>
+            <span id="texto-boton-voz">Dictar descripción</span>
+        </button>
+        <button
+            id="boton-limpiar-descripcion"
+            class="boton secundario boton-voz-secundario"
+            type="button"
+            aria-label="Borrar el texto de la descripción"
+            hidden
+        >
+            Limpiar texto
+        </button>
+    </div>
+    <p id="estado-voz" class="estado-voz" role="status" aria-live="polite"></p>
+    <p class="nota aviso-voz">
+        El micrófono solo se enciende al pulsar «Dictar descripción» y el audio es procesado por tu navegador. El reconocimiento automático puede cometer errores; revisa y edita el texto antes de generar el ticket.
+    </p>
+</div>
                         <input id="correo-reporte" type="email" required placeholder="persona@example.com">
                         <button class="boton" type="submit">Generar ticket de reporte</button>
                     </form>

@@ -62,6 +62,139 @@ const inputDescripcion = document.getElementById("descripcion");
 const inputCorreoReporte = document.getElementById("correo-reporte");
 const resultadoFuga = document.getElementById("resultado-fuga");
 
+// Criterio 1d (Mejora HCI): Reconocimiento de voz multimodal en #descripcion
+const botonVoz = document.getElementById("boton-voz");
+const textoBotonVoz = document.getElementById("texto-boton-voz");
+const botonLimpiarDescripcion = document.getElementById("boton-limpiar-descripcion");
+const estadoVoz = document.getElementById("estado-voz");
+
+function actualizarBotonLimpiar() {
+    if (botonLimpiarDescripcion && inputDescripcion) {
+        botonLimpiarDescripcion.hidden = inputDescripcion.value.trim().length === 0;
+    }
+}
+
+function mostrarEstadoVoz(mensaje, tipo) {
+    if (!estadoVoz) return;
+    estadoVoz.textContent = mensaje;
+    estadoVoz.className = "estado-voz" + (tipo ? " " + tipo : "");
+}
+
+if (inputDescripcion) {
+    inputDescripcion.addEventListener("input", actualizarBotonLimpiar);
+}
+
+if (botonLimpiarDescripcion && inputDescripcion) {
+    botonLimpiarDescripcion.addEventListener("click", function () {
+        inputDescripcion.value = "";
+        inputDescripcion.classList.remove("campo-error");
+        actualizarBotonLimpiar();
+        inputDescripcion.focus();
+        mostrarEstadoVoz("Texto borrado. Puedes volver a dictar o escribir manualmente.", "");
+    });
+}
+
+if (botonVoz && inputDescripcion && estadoVoz) {
+    const ReconocimientoVoz = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!ReconocimientoVoz) {
+        // Degradación elegante si el navegador no soporta Web Speech API
+        botonVoz.disabled = true;
+        mostrarEstadoVoz(
+            "Tu navegador no admite dictado por voz. Puedes escribir la descripción manualmente sin inconvenientes.",
+            ""
+        );
+    } else {
+        const reconocimiento = new ReconocimientoVoz();
+        reconocimiento.lang = "es-PE";
+        reconocimiento.continuous = true;
+        reconocimiento.interimResults = true;
+
+        let escuchando = false;
+        let textoBase = "";
+
+        botonVoz.addEventListener("click", function () {
+            if (escuchando) {
+                reconocimiento.stop();
+            } else {
+                textoBase = inputDescripcion.value.trim();
+                if (textoBase.length > 0) {
+                    textoBase += " ";
+                }
+                try {
+                    reconocimiento.start();
+                } catch (error) {
+                    mostrarEstadoVoz("No se pudo iniciar el micrófono. Intenta nuevamente.", "error");
+                }
+            }
+        });
+
+        reconocimiento.onstart = function () {
+            escuchando = true;
+            botonVoz.classList.add("escuchando");
+            botonVoz.setAttribute("aria-pressed", "true");
+            textoBotonVoz.textContent = "Detener dictado";
+            inputDescripcion.classList.add("escuchando");
+            inputDescripcion.classList.remove("campo-error");
+            mostrarEstadoVoz("● Escuchando en español... Habla ahora y pulsa «Detener dictado» al terminar.", "escuchando");
+        };
+
+        reconocimiento.onresult = function (evento) {
+            let transcripcionFinal = "";
+            let transcripcionParcial = "";
+
+            for (let i = evento.resultIndex; i < evento.results.length; i++) {
+                const fragmento = evento.results[i][0].transcript;
+                if (evento.results[i].isFinal) {
+                    transcripcionFinal += fragmento;
+                } else {
+                    transcripcionParcial += fragmento;
+                }
+            }
+
+            if (transcripcionFinal) {
+                textoBase += transcripcionFinal;
+            }
+
+            inputDescripcion.value = (textoBase + transcripcionParcial).trimStart();
+            actualizarBotonLimpiar();
+        };
+
+        reconocimiento.onerror = function (evento) {
+            let mensajeError = "Ocurrió un problema con el reconocimiento de voz. Puedes continuar escribiendo manualmente.";
+
+            if (evento.error === "not-allowed" || evento.error === "service-not-allowed") {
+                mensajeError = "Permiso de micrófono denegado. Habilítalo en el navegador o escribe la descripción manualmente.";
+            } else if (evento.error === "no-speech") {
+                mensajeError = "No se detectó voz. Acércate al micrófono e inténtalo de nuevo, o escribe manualmente.";
+            } else if (evento.error === "audio-capture") {
+                mensajeError = "No se encontró ningún micrófono disponible en tu dispositivo. Usa el teclado para escribir.";
+            } else if (evento.error === "network") {
+                mensajeError = "Se requiere conexión a internet para transcribir la voz. Puedes escribir manualmente.";
+            }
+
+            mostrarEstadoVoz(mensajeError, "error");
+        };
+
+        reconocimiento.onend = function () {
+            escuchando = false;
+            botonVoz.classList.remove("escuchando");
+            botonVoz.setAttribute("aria-pressed", "false");
+            textoBotonVoz.textContent = "Dictar descripción";
+            inputDescripcion.classList.remove("escuchando");
+            actualizarBotonLimpiar();
+
+            if (!estadoVoz.classList.contains("error")) {
+                if (inputDescripcion.value.trim().length > 0) {
+                    mostrarEstadoVoz("Dictado finalizado. Revisa y edita el texto si es necesario antes de generar el ticket.", "");
+                } else {
+                    mostrarEstadoVoz("Dictado detenido sin texto registrado.", "");
+                }
+            }
+        };
+    }
+}
+
 // Criterio 1a: Mostrar vista previa de la foto seleccionada con el evento "change"
 if (inputFoto) {
     inputFoto.addEventListener("change", function () {
